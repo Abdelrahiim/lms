@@ -6,10 +6,10 @@ include .env
 export
 
 run:
-	go run cmd/api/main.go
+	go run cmd/server/main.go
 
 build:
-	go build -o build/api cmd/api/main.go
+	go build -o build/server cmd/server/main.go
 
 test:
 	go test -v ./...
