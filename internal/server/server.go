@@ -90,4 +90,3 @@ func (s *Server) handleShutdown() {
 
 	log.Println("Server shutdown complete")
 }
-
