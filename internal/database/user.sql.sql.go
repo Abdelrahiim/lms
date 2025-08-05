@@ -56,3 +56,48 @@ func (q *Queries) GetUser(ctx context.Context, id uuid.UUID) (User, error) {
 	)
 	return i, err
 }
+
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, email, email_verified, email_verification_token, email_verified_at, password_hash, first_name, last_name, display_name, avatar_url, bio, phone, date_of_birth, gender, country, timezone, preferred_language, is_active, suspended_at, suspended_reason, last_login_at, login_count, failed_login_attempts, failed_login_locked_until, password_changed_at, must_change_password, two_factor_enabled, two_factor_secret, backup_codes, metadata, created_at, updated_at, deleted_at FROM users WHERE email = $1
+`
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.EmailVerified,
+		&i.EmailVerificationToken,
+		&i.EmailVerifiedAt,
+		&i.PasswordHash,
+		&i.FirstName,
+		&i.LastName,
+		&i.DisplayName,
+		&i.AvatarUrl,
+		&i.Bio,
+		&i.Phone,
+		&i.DateOfBirth,
+		&i.Gender,
+		&i.Country,
+		&i.Timezone,
+		&i.PreferredLanguage,
+		&i.IsActive,
+		&i.SuspendedAt,
+		&i.SuspendedReason,
+		&i.LastLoginAt,
+		&i.LoginCount,
+		&i.FailedLoginAttempts,
+		&i.FailedLoginLockedUntil,
+		&i.PasswordChangedAt,
+		&i.MustChangePassword,
+		&i.TwoFactorEnabled,
+		&i.TwoFactorSecret,
+		pq.Array(&i.BackupCodes),
+		&i.Metadata,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}

@@ -22,6 +22,7 @@ bin/
 build/
 dist/
 tmp/
+setup.md
 
 # Environment variables
 .env
