@@ -29,7 +29,8 @@ func RequestID(next http.HandlerFunc) http.HandlerFunc {
 			requestID = uuid.New().String()
 		}
 
-		ctx := context.WithValue(r.Context(), "request_id", requestID)
+		type requestIDKey struct{}
+		ctx := context.WithValue(r.Context(), requestIDKey{}, requestID)
 		w.Header().Set("X-Request-ID", requestID)
 
 		next(w, r.WithContext(ctx))
