@@ -11,7 +11,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	mux := http.NewServeMux()
 
 	// Auth routes with validation
-	authHandler := &handler.AuthHandler{}
+	authHandler := handler.NewAuthHandler(s.db, s.queries, s.config)
 	
 	// Apply validation middleware to specific routes
 	mux.HandleFunc("POST /auth/register", 
