@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"reflect"
 	"strings"
 
+	"github.com/Abdelrahiim/lms/internal/utils"
 	"github.com/go-playground/validator/v10"
 )
 
@@ -48,7 +50,7 @@ func init() {
 // registerCustomValidators adds custom validation rules
 func registerCustomValidators() {
 	// Custom timezone validator
-	validate.RegisterValidation("timezone", func(fl validator.FieldLevel) bool {
+	err := validate.RegisterValidation("timezone", func(fl validator.FieldLevel) bool {
 		tz := fl.Field().String()
 		if tz == "" {
 			return true // Allow empty for optional fields
@@ -57,6 +59,9 @@ func registerCustomValidators() {
 		// For now, just check if it's not empty
 		return len(tz) > 0
 	})
+	if err != nil {
+		log.Fatal("failed to register custom validator: %w", err)
+	}
 }
 
 // ValidateJSON middleware validates JSON request body against a struct
@@ -78,11 +83,7 @@ func ValidateJSON[T any](next http.HandlerFunc) http.HandlerFunc {
 		decoder.DisallowUnknownFields() // Strict JSON parsing
 
 		if err := decoder.Decode(&payload); err != nil {
-			responseError := ErrorResponse{
-				Error:   "invalid_json",
-				Message: "Invalid JSON format",
-			}
-			respondWithError(w, http.StatusBadRequest, responseError)
+			utils.SendErrorResponse(w, "invalid_json : Invalid JSON format", http.StatusBadRequest)
 			return
 		}
 
@@ -99,12 +100,7 @@ func ValidateJSON[T any](next http.HandlerFunc) http.HandlerFunc {
 				})
 			}
 
-			responseError := ErrorResponse{
-				Error:   "validation_failed",
-				Message: "Request validation failed",
-				Errors:  validationErrors,
-			}
-			respondWithError(w, http.StatusBadRequest, responseError)
+			utils.SendErrorResponse(w, "validation_failed : Request validation failed", http.StatusBadRequest)
 			return
 		}
 
@@ -155,5 +151,7 @@ func getErrorMessage(err validator.FieldError) string {
 func respondWithError(w http.ResponseWriter, statusCode int, errorResponse ErrorResponse) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(errorResponse)
+	if err := json.NewEncoder(w).Encode(errorResponse); err != nil {
+		log.Fatal("failed to encode error response: %w", err)
+	}
 }

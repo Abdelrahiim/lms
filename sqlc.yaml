@@ -19,7 +19,7 @@ sql:
         emit_all_enum_values: true
         json_tags_case_style: "camel"
         output_models_file_name: "models.go"
-        output_querier_file_name: "querier.go"
+        output_querier_file_name: "queries.go"
         output_files_suffix: ".sql.go"
         overrides:
           - db_type: "uuid"

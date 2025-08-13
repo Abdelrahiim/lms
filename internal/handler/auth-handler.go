@@ -3,6 +3,7 @@ package handler
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net" // Add this
 	"net/http"
 	"time"
@@ -75,16 +76,56 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	_, err := h.queries.GetUserByEmail(r.Context(), req.Email)
 	if err == nil {
 		// Email already exists
-		json.NewEncoder(w).Encode(map[string]string{"error": "Email already registered"})
+		utils.SendErrorResponse(w, "Email already registered", http.StatusConflict)
 		return
 	}
 
 	// Your registration logic here
 	// The req variable contains the validated RegisterRequest
+	// Create user
+	// Hash the password before storing
+	hashedPassword, err := utils.HashPassword(req.Password)
+	if err != nil {
+		utils.SendErrorResponse(w, "Error hashing password", http.StatusInternalServerError)
+		return
+	}
+
+	err = h.queries.CreateUser(r.Context(), database.CreateUserParams{
+		ID:           uuid.New(),
+		Email:        req.Email,
+		PasswordHash: hashedPassword,
+		FirstName:    req.FirstName,
+		LastName:     req.LastName,
+		DisplayName:  sql.NullString{String: req.DisplayName, Valid: req.DisplayName != ""},
+		AvatarUrl:    sql.NullString{String: req.AvatarURL, Valid: req.AvatarURL != ""},
+		Bio:          sql.NullString{String: req.Bio, Valid: req.Bio != ""},
+		Phone:        sql.NullString{String: req.Phone, Valid: req.Phone != ""},
+		DateOfBirth: func() sql.NullTime {
+			if req.DateOfBirth == "" {
+				return sql.NullTime{Valid: false}
+			}
+			t, err := time.Parse("2006-01-02", req.DateOfBirth)
+			if err != nil {
+				return sql.NullTime{Valid: false}
+			}
+			return sql.NullTime{Time: t, Valid: true}
+		}(),
+		Gender:            sql.NullString{String: req.Gender, Valid: req.Gender != ""},
+		Country:           sql.NullString{String: req.Country, Valid: req.Country != ""},
+		Timezone:          sql.NullString{String: req.Timezone, Valid: req.Timezone != ""},
+		PreferredLanguage: sql.NullString{String: req.PreferredLanguage, Valid: req.PreferredLanguage != ""},
+	})
+	// Return the created user data instead of just a message
+	if err != nil {
+		utils.SendErrorResponse(w, "Error creating user", http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{"message": "User registered successfully"})
+	if err := json.NewEncoder(w).Encode(utils.SendMutationResponse("User created successfully")); err != nil {
+		log.Fatal("failed to encode response: %w", err)
+	}
 }
 
 // Login handler with validation
@@ -164,5 +205,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(jsonData)
+	if err := json.NewEncoder(w).Encode(jsonData); err != nil {
+		log.Fatal("failed to encode response: %w", err)
+	}
 }

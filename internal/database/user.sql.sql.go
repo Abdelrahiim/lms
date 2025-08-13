@@ -7,10 +7,57 @@ package database
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 )
+
+const createUser = `-- name: CreateUser :exec
+INSERT INTO users (id, email, password_hash, first_name, last_name, display_name, avatar_url, bio, phone, date_of_birth, gender, country, timezone, preferred_language, created_at, updated_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+`
+
+type CreateUserParams struct {
+	ID                uuid.UUID      `json:"id"`
+	Email             string         `json:"email"`
+	PasswordHash      string         `json:"passwordHash"`
+	FirstName         string         `json:"firstName"`
+	LastName          string         `json:"lastName"`
+	DisplayName       sql.NullString `json:"displayName"`
+	AvatarUrl         sql.NullString `json:"avatarUrl"`
+	Bio               sql.NullString `json:"bio"`
+	Phone             sql.NullString `json:"phone"`
+	DateOfBirth       sql.NullTime   `json:"dateOfBirth"`
+	Gender            sql.NullString `json:"gender"`
+	Country           sql.NullString `json:"country"`
+	Timezone          sql.NullString `json:"timezone"`
+	PreferredLanguage sql.NullString `json:"preferredLanguage"`
+	CreatedAt         sql.NullTime   `json:"createdAt"`
+	UpdatedAt         sql.NullTime   `json:"updatedAt"`
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
+	_, err := q.db.ExecContext(ctx, createUser,
+		arg.ID,
+		arg.Email,
+		arg.PasswordHash,
+		arg.FirstName,
+		arg.LastName,
+		arg.DisplayName,
+		arg.AvatarUrl,
+		arg.Bio,
+		arg.Phone,
+		arg.DateOfBirth,
+		arg.Gender,
+		arg.Country,
+		arg.Timezone,
+		arg.PreferredLanguage,
+		arg.CreatedAt,
+		arg.UpdatedAt,
+	)
+	return err
+}
 
 const getUser = `-- name: GetUser :one
 SELECT id, email, email_verified, email_verification_token, email_verified_at, password_hash, first_name, last_name, display_name, avatar_url, bio, phone, date_of_birth, gender, country, timezone, preferred_language, is_active, suspended_at, suspended_reason, last_login_at, login_count, failed_login_attempts, failed_login_locked_until, password_changed_at, must_change_password, two_factor_enabled, two_factor_secret, backup_codes, metadata, created_at, updated_at, deleted_at FROM users WHERE id = $1

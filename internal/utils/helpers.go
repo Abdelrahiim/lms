@@ -149,3 +149,15 @@ func GetLocation(r *http.Request) string {
 	}
 	return ""
 }
+
+type MutationResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
+
+func SendMutationResponse(message string) MutationResponse {
+	return MutationResponse{
+		Success: true,
+		Message: message,
+	}
+}

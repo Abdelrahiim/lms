@@ -2,20 +2,19 @@ package utils
 
 import (
 	"encoding/json"
-	"fmt"
+	"log"
 	"net/http"
 )
 
 // ErrorResponse represents a standardized API error response format
 type ErrorResponse struct {
-	Success bool        `json:"success"`
-	Message string      `json:"message"`
-	Status  int        `json:"status"`
-
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Status  int    `json:"status"`
 }
 
 // SendErrorResponse writes a JSON error response with proper headers
-func SendErrorResponse(w http.ResponseWriter, message string, status int) error {
+func SendErrorResponse(w http.ResponseWriter, message string, status int) {
 	response := ErrorResponse{
 		Success: false,
 		Message: message,
@@ -27,7 +26,6 @@ func SendErrorResponse(w http.ResponseWriter, message string, status int) error 
 	w.WriteHeader(status)
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		return fmt.Errorf("failed to encode error response: %w", err)
+		log.Fatal("failed to encode error response: %w", err)
 	}
-	return nil
 }
