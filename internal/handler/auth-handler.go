@@ -211,9 +211,38 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
-	// Get session ID from request
-	
-	
+	token, err := utils.GetBearerToken(r.Header)
+	if err != nil {
+		utils.SendErrorResponse(w, "Error getting bearer token", http.StatusInternalServerError)
+		return
+	}
+	claims, err := utils.ValidateJWT(token, h.config.Auth.JWTSecret)
+	if err != nil {
+		utils.SendErrorResponse(w, "Error validating token", http.StatusInternalServerError)
+		return
+	}
 
-	
+	session, err := h.queries.GetSession(r.Context(), database.GetSessionParams{
+		UserID:     uuid.MustParse(claims.UserID),
+		IpAddress:  pqtype.Inet{IPNet: net.IPNet{IP: net.ParseIP(utils.GetClientIP(r))}, Valid: true},
+	})
+	if err != nil {
+		utils.SendErrorResponse(w, "Error getting session", http.StatusInternalServerError)
+		return
+	}
+
+	err = h.queries.RevokeSession(r.Context(), database.RevokeSessionParams{
+		ID:         session.ID,
+		RevokedAt:  sql.NullTime{Time: time.Now(), Valid: true},
+		RevokedReason: sql.NullString{String: "User logged out", Valid: true},
+	})
+	if err != nil {
+		utils.SendErrorResponse(w, "Error revoking session", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(utils.SendMutationResponse("Logged out successfully")); err != nil {
+		log.Fatal("failed to encode response: %w", err)
+	}
 }
