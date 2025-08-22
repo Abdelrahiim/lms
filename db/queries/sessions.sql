@@ -1,4 +1,4 @@
--- name: CreateSession :one
+-- name: CreateSession :exec
 INSERT INTO user_sessions (
         id,
         user_id,
@@ -38,19 +38,18 @@ VALUES (
         $16,
         $17,
         $18
-    )
-RETURNING *;
+    );
 
--- name: GetSession :one
+-- name: GetSessionByUserID :one
 SELECT *
 FROM user_sessions
 WHERE user_id = $1
     AND ip_address = $2
-    AND is_active = true;
+    AND is_active = TRUE;
 
 -- name: RevokeSession :exec
 UPDATE user_sessions
-SET is_active = false,
+SET is_active = FALSE,
     revoked_at = $1,
     revoked_reason = $2
 WHERE id = $3;
@@ -59,4 +58,15 @@ WHERE id = $3;
 SELECT *
 FROM user_sessions
 WHERE user_id = $1
-    AND is_active = true;
+    AND is_active = $2;
+
+-- name: UpdateSessionLastAccessedAt :exec
+UPDATE user_sessions
+SET last_accessed_at = $1
+WHERE id = $2;
+
+-- name: GetSessionByRefreshToken :one
+SELECT *
+FROM user_sessions
+WHERE refresh_token_hash = $1
+    AND is_active = TRUE;

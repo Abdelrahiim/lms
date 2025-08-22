@@ -14,31 +14,47 @@ import (
 	"github.com/sqlc-dev/pqtype"
 )
 
-const createSession = `-- name: CreateSession :one
+const createSession = `-- name: CreateSession :exec
 INSERT INTO user_sessions (
-    id,
-    user_id,
-    refresh_token_hash,
-    access_token_hash,
-    device_name,
-    device_type,
-    browser,
-    browser_version,
-    os,
-    os_version,
-    ip_address,
-    location,
-    is_active,
-    last_accessed_at,
-    expires_at,
-    revoked_at,
-    revoked_reason,
-    created_at
-)
+        id,
+        user_id,
+        refresh_token_hash,
+        access_token_hash,
+        device_name,
+        device_type,
+        browser,
+        browser_version,
+        os,
+        os_version,
+        ip_address,
+        location,
+        is_active,
+        last_accessed_at,
+        expires_at,
+        revoked_at,
+        revoked_reason,
+        created_at
+    )
 VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
-)
-RETURNING id, user_id, refresh_token_hash, access_token_hash, device_name, device_type, browser, browser_version, os, os_version, ip_address, location, is_active, last_accessed_at, expires_at, revoked_at, revoked_reason, created_at
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8,
+        $9,
+        $10,
+        $11,
+        $12,
+        $13,
+        $14,
+        $15,
+        $16,
+        $17,
+        $18
+    )
 `
 
 type CreateSessionParams struct {
@@ -62,8 +78,8 @@ type CreateSessionParams struct {
 	CreatedAt        sql.NullTime          `json:"createdAt"`
 }
 
-func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (UserSession, error) {
-	row := q.db.QueryRowContext(ctx, createSession,
+func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) error {
+	_, err := q.db.ExecContext(ctx, createSession,
 		arg.ID,
 		arg.UserID,
 		arg.RefreshTokenHash,
@@ -83,36 +99,23 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (U
 		arg.RevokedReason,
 		arg.CreatedAt,
 	)
-	var i UserSession
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.RefreshTokenHash,
-		&i.AccessTokenHash,
-		&i.DeviceName,
-		&i.DeviceType,
-		&i.Browser,
-		&i.BrowserVersion,
-		&i.Os,
-		&i.OsVersion,
-		&i.IpAddress,
-		&i.Location,
-		&i.IsActive,
-		&i.LastAccessedAt,
-		&i.ExpiresAt,
-		&i.RevokedAt,
-		&i.RevokedReason,
-		&i.CreatedAt,
-	)
-	return i, err
+	return err
 }
 
 const getActiveSessions = `-- name: GetActiveSessions :many
-SELECT id, user_id, refresh_token_hash, access_token_hash, device_name, device_type, browser, browser_version, os, os_version, ip_address, location, is_active, last_accessed_at, expires_at, revoked_at, revoked_reason, created_at FROM user_sessions WHERE user_id = $1 AND is_active = true
+SELECT id, user_id, refresh_token_hash, access_token_hash, device_name, device_type, browser, browser_version, os, os_version, ip_address, location, is_active, last_accessed_at, expires_at, revoked_at, revoked_reason, created_at
+FROM user_sessions
+WHERE user_id = $1
+    AND is_active = $2
 `
 
-func (q *Queries) GetActiveSessions(ctx context.Context, userID uuid.UUID) ([]UserSession, error) {
-	rows, err := q.db.QueryContext(ctx, getActiveSessions, userID)
+type GetActiveSessionsParams struct {
+	UserID   uuid.UUID    `json:"userId"`
+	IsActive sql.NullBool `json:"isActive"`
+}
+
+func (q *Queries) GetActiveSessions(ctx context.Context, arg GetActiveSessionsParams) ([]UserSession, error) {
+	rows, err := q.db.QueryContext(ctx, getActiveSessions, arg.UserID, arg.IsActive)
 	if err != nil {
 		return nil, err
 	}
@@ -153,17 +156,54 @@ func (q *Queries) GetActiveSessions(ctx context.Context, userID uuid.UUID) ([]Us
 	return items, nil
 }
 
-const getSession = `-- name: GetSession :one
-SELECT id, user_id, refresh_token_hash, access_token_hash, device_name, device_type, browser, browser_version, os, os_version, ip_address, location, is_active, last_accessed_at, expires_at, revoked_at, revoked_reason, created_at FROM user_sessions WHERE user_id = $1 AND ip_address = $2 AND is_active = true
+const getSessionByRefreshToken = `-- name: GetSessionByRefreshToken :one
+SELECT id, user_id, refresh_token_hash, access_token_hash, device_name, device_type, browser, browser_version, os, os_version, ip_address, location, is_active, last_accessed_at, expires_at, revoked_at, revoked_reason, created_at
+FROM user_sessions
+WHERE refresh_token_hash = $1
+    AND is_active = TRUE
 `
 
-type GetSessionParams struct {
+func (q *Queries) GetSessionByRefreshToken(ctx context.Context, refreshTokenHash string) (UserSession, error) {
+	row := q.db.QueryRowContext(ctx, getSessionByRefreshToken, refreshTokenHash)
+	var i UserSession
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.RefreshTokenHash,
+		&i.AccessTokenHash,
+		&i.DeviceName,
+		&i.DeviceType,
+		&i.Browser,
+		&i.BrowserVersion,
+		&i.Os,
+		&i.OsVersion,
+		&i.IpAddress,
+		&i.Location,
+		&i.IsActive,
+		&i.LastAccessedAt,
+		&i.ExpiresAt,
+		&i.RevokedAt,
+		&i.RevokedReason,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getSessionByUserID = `-- name: GetSessionByUserID :one
+SELECT id, user_id, refresh_token_hash, access_token_hash, device_name, device_type, browser, browser_version, os, os_version, ip_address, location, is_active, last_accessed_at, expires_at, revoked_at, revoked_reason, created_at
+FROM user_sessions
+WHERE user_id = $1
+    AND ip_address = $2
+    AND is_active = TRUE
+`
+
+type GetSessionByUserIDParams struct {
 	UserID    uuid.UUID   `json:"userId"`
 	IpAddress pqtype.Inet `json:"ipAddress"`
 }
 
-func (q *Queries) GetSession(ctx context.Context, arg GetSessionParams) (UserSession, error) {
-	row := q.db.QueryRowContext(ctx, getSession, arg.UserID, arg.IpAddress)
+func (q *Queries) GetSessionByUserID(ctx context.Context, arg GetSessionByUserIDParams) (UserSession, error) {
+	row := q.db.QueryRowContext(ctx, getSessionByUserID, arg.UserID, arg.IpAddress)
 	var i UserSession
 	err := row.Scan(
 		&i.ID,
@@ -190,7 +230,7 @@ func (q *Queries) GetSession(ctx context.Context, arg GetSessionParams) (UserSes
 
 const revokeSession = `-- name: RevokeSession :exec
 UPDATE user_sessions
-SET is_active = false,
+SET is_active = FALSE,
     revoked_at = $1,
     revoked_reason = $2
 WHERE id = $3
@@ -204,5 +244,21 @@ type RevokeSessionParams struct {
 
 func (q *Queries) RevokeSession(ctx context.Context, arg RevokeSessionParams) error {
 	_, err := q.db.ExecContext(ctx, revokeSession, arg.RevokedAt, arg.RevokedReason, arg.ID)
+	return err
+}
+
+const updateSessionLastAccessedAt = `-- name: UpdateSessionLastAccessedAt :exec
+UPDATE user_sessions
+SET last_accessed_at = $1
+WHERE id = $2
+`
+
+type UpdateSessionLastAccessedAtParams struct {
+	LastAccessedAt sql.NullTime `json:"lastAccessedAt"`
+	ID             uuid.UUID    `json:"id"`
+}
+
+func (q *Queries) UpdateSessionLastAccessedAt(ctx context.Context, arg UpdateSessionLastAccessedAtParams) error {
+	_, err := q.db.ExecContext(ctx, updateSessionLastAccessedAt, arg.LastAccessedAt, arg.ID)
 	return err
 }

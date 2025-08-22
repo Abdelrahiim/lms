@@ -57,6 +57,10 @@ type LoginResponse struct {
 	User         User   `json:"user"`
 }
 
+type RefreshResponse struct {
+	AccessToken string `json:"accessToken"`
+}
+
 type User struct {
 	ID        string `json:"id"`
 	Email     string `json:"email"`
@@ -165,7 +169,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Create session
-	_, err = h.queries.CreateSession(r.Context(), database.CreateSessionParams{
+	err = h.queries.CreateSession(r.Context(), database.CreateSessionParams{
 		ID:               uuid.New(),
 		UserID:           user.ID,
 		RefreshTokenHash: refreshToken,
@@ -222,9 +226,9 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := h.queries.GetSession(r.Context(), database.GetSessionParams{
-		UserID:     uuid.MustParse(claims.UserID),
-		IpAddress:  pqtype.Inet{IPNet: net.IPNet{IP: net.ParseIP(utils.GetClientIP(r))}, Valid: true},
+	session, err := h.queries.GetSessionByUserID(r.Context(), database.GetSessionByUserIDParams{
+		UserID:    uuid.MustParse(claims.UserID),
+		IpAddress: pqtype.Inet{IPNet: net.IPNet{IP: net.ParseIP(utils.GetClientIP(r))}, Valid: true},
 	})
 	if err != nil {
 		utils.SendErrorResponse(w, "Error getting session", http.StatusInternalServerError)
@@ -232,8 +236,8 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = h.queries.RevokeSession(r.Context(), database.RevokeSessionParams{
-		ID:         session.ID,
-		RevokedAt:  sql.NullTime{Time: time.Now(), Valid: true},
+		ID:            session.ID,
+		RevokedAt:     sql.NullTime{Time: time.Now(), Valid: true},
 		RevokedReason: sql.NullString{String: "User logged out", Valid: true},
 	})
 	if err != nil {
@@ -243,6 +247,50 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(utils.SendMutationResponse("Logged out successfully")); err != nil {
+		log.Fatal("failed to encode response: %w", err)
+	}
+}
+
+func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
+	refreshToken, err := utils.GetBearerToken(r.Header)
+	if err != nil {
+		utils.SendErrorResponse(w, "Error getting bearer token", http.StatusInternalServerError)
+		return
+	}
+
+	session, err := h.queries.GetSessionByRefreshToken(r.Context(), refreshToken)
+	if err != nil {
+		utils.SendErrorResponse(w, "Error getting session", http.StatusInternalServerError)
+		return
+	}
+
+	user, err := h.queries.GetUser(r.Context(), session.UserID)
+	if err != nil {
+		utils.SendErrorResponse(w, "Error getting user", http.StatusInternalServerError)
+		return
+	}
+
+	accessToken, err := utils.GenerateAccessToken(user.ID, user.Email, h.config.Auth.JWTSecret)
+	if err != nil {
+		utils.SendErrorResponse(w, "Error generating access token", http.StatusInternalServerError)
+		return
+	}
+
+	err = h.queries.UpdateSessionLastAccessedAt(r.Context(), database.UpdateSessionLastAccessedAtParams{
+		ID:             session.ID,
+		LastAccessedAt: sql.NullTime{Time: time.Now(), Valid: true},
+	})
+	if err != nil {
+		utils.SendErrorResponse(w, "Error updating session last accessed at", http.StatusInternalServerError)
+		return
+	}
+
+	refreshResponse := RefreshResponse{
+		AccessToken: accessToken,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(refreshResponse); err != nil {
 		log.Fatal("failed to encode response: %w", err)
 	}
 }

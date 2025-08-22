@@ -14,10 +14,10 @@ import (
 
 // CustomClaims represents the JWT claims structure following industry standards
 type CustomClaims struct {
-	UserID string `json:"sub"`           // Subject (user ID)
-	Email  string `json:"email"`         // User email
+	UserID string `json:"sub"`            // Subject (user ID)
+	Email  string `json:"email"`          // User email
 	Role   string `json:"role,omitempty"` // User role (optional)
-	Type   string `json:"typ"`           // Token type (access_token)
+	Type   string `json:"typ"`            // Token type (access_token)
 	jwt.RegisteredClaims
 }
 
@@ -42,7 +42,7 @@ func CheckPasswordHash(hashedPassword, password string) error {
 // GenerateAccessToken creates a JWT access token with standard claims
 func GenerateAccessToken(userID uuid.UUID, email string, secretKey string) (string, error) {
 	now := time.Now().UTC()
-	
+
 	claims := CustomClaims{
 		UserID: userID.String(),
 		Email:  email,
@@ -118,10 +118,10 @@ func GetBearerToken(headers http.Header) (string, error) {
 	if authHeader == "" {
 		return "", fmt.Errorf("no Authorization header found")
 	}
-	
+
 	if len(authHeader) < 7 || authHeader[:6] != "Bearer" {
 		return "", fmt.Errorf("invalid Authorization header format")
 	}
-	
+
 	return authHeader[7:], nil
 }

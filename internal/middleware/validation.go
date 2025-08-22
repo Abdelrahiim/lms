@@ -100,7 +100,11 @@ func ValidateJSON[T any](next http.HandlerFunc) http.HandlerFunc {
 				})
 			}
 
-			utils.SendErrorResponse(w, "validation_failed : Request validation failed", http.StatusBadRequest)
+			respondWithError(w, http.StatusBadRequest, ErrorResponse{
+				Error:   "validation_failed",
+				Message: "Request validation failed",
+				Errors:  validationErrors,
+			})
 			return
 		}
 

@@ -49,7 +49,7 @@ func New(cfg *config.Config) (*Server, error) {
 	}
 
 	// Setup routes
-	mux := s.setupRoutes()
+	mux := s.RegisterRoutes()
 
 	// Create HTTP server
 	s.httpServer = &http.Server{
