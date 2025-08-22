@@ -209,3 +209,8 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		log.Fatal("failed to encode response: %w", err)
 	}
 }
+
+func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	// Get session ID from request
+	
+}

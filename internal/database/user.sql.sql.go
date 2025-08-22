@@ -148,3 +148,46 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 	)
 	return i, err
 }
+
+const updateUser = `-- name: UpdateUser :exec
+UPDATE users SET email = $2, password_hash = $3, first_name = $4, last_name = $5, display_name = $6, avatar_url = $7, bio = $8, phone = $9, date_of_birth = $10, gender = $11, country = $12, timezone = $13, preferred_language = $14, updated_at = $15 WHERE id = $1
+`
+
+type UpdateUserParams struct {
+	ID                uuid.UUID      `json:"id"`
+	Email             string         `json:"email"`
+	PasswordHash      string         `json:"passwordHash"`
+	FirstName         string         `json:"firstName"`
+	LastName          string         `json:"lastName"`
+	DisplayName       sql.NullString `json:"displayName"`
+	AvatarUrl         sql.NullString `json:"avatarUrl"`
+	Bio               sql.NullString `json:"bio"`
+	Phone             sql.NullString `json:"phone"`
+	DateOfBirth       sql.NullTime   `json:"dateOfBirth"`
+	Gender            sql.NullString `json:"gender"`
+	Country           sql.NullString `json:"country"`
+	Timezone          sql.NullString `json:"timezone"`
+	PreferredLanguage sql.NullString `json:"preferredLanguage"`
+	UpdatedAt         sql.NullTime   `json:"updatedAt"`
+}
+
+func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
+	_, err := q.db.ExecContext(ctx, updateUser,
+		arg.ID,
+		arg.Email,
+		arg.PasswordHash,
+		arg.FirstName,
+		arg.LastName,
+		arg.DisplayName,
+		arg.AvatarUrl,
+		arg.Bio,
+		arg.Phone,
+		arg.DateOfBirth,
+		arg.Gender,
+		arg.Country,
+		arg.Timezone,
+		arg.PreferredLanguage,
+		arg.UpdatedAt,
+	)
+	return err
+}

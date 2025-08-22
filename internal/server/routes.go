@@ -32,6 +32,14 @@ func (s *Server) RegisterRoutes() http.Handler {
 		),
 	)
 
+	mux.HandleFunc("POST /auth/logout",
+		middleware.Chain(
+			authHandler.Logout,
+			middleware.Logger,
+			middleware.RequestID,
+		),
+	)
+
 	return mux
 }
 
