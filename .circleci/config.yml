@@ -1,33 +1,76 @@
 version: 2.1
 
 orbs:
-  docker: circleci/docker@2.2.0
-  go: circleci/go@1.8.0
+  docker: circleci/docker@2.6.0
+  go: circleci/go@1.11.0
 
 executors:
   go-executor:
     docker:
-      - image: cimg/go:1.21
+      - image: cimg/go:1.25.0
+    environment:
+      GO111MODULE: "on"
+      GOPROXY: "https://proxy.golang.org,direct"
+      GOSUMDB: "sum.golang.org"
 
 jobs:
+
+
+  security-scan-and-build:
+    executor: go-executor
+    steps:
+      - checkout
+      - go/load-cache
+      - go/mod-download
+      - run:
+          name: Install security analysis tools
+          command: |
+            go install honnef.co/go/tools/cmd/staticcheck@latest
+            go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+            go install golang.org/x/vuln/cmd/govulncheck@latest
+      - run:
+          name: Execute code security analysis
+          command: |
+            staticcheck ./...
+            gosec -exclude=G101 -exclude-dir=internal/database ./...
+            govulncheck ./...
+      - run:
+          name: Compile application using Makefile
+          command: |
+            make build
+
+  build:
+    executor: go-executor
+    steps:
+      - checkout
+      - setup_remote_docker:
+          version: 20.10.18
+      - run:
+          name: Build application
+          command: |
+            CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app ./cmd/server/main.go
+      - run:
+          name: Build Docker image
+          command: |
+            docker build -t ${CIRCLE_PROJECT_REPONAME}:${CIRCLE_SHA1} -f dockerfile .
+            docker tag ${CIRCLE_PROJECT_REPONAME}:${CIRCLE_SHA1} ${CIRCLE_PROJECT_REPONAME}:latest
+
   publish:
     executor: go-executor
     steps:
       - checkout
       - setup_remote_docker:
-          version: 20.10.14
+          version: 20.10.18
       - docker/check:
           docker-username: DOCKER_USERNAME
           docker-password: DOCKER_PASSWORD
-      - docker/build:
-          image: $DOCKER_USERNAME/lms
-          tag: << pipeline.git.revision >>
-      - docker/push:
-          image: $DOCKER_USERNAME/lms
-          tag: << pipeline.git.revision >>
-      - docker/push:
-          image: $DOCKER_USERNAME/lms
-          tag: latest
+      - run:
+          name: Build and push Docker image
+          command: |
+            docker build -t $DOCKER_USERNAME/lms:${CIRCLE_SHA1} -f dockerfile .
+            docker tag $DOCKER_USERNAME/lms:${CIRCLE_SHA1} $DOCKER_USERNAME/lms:latest
+            docker push $DOCKER_USERNAME/lms:${CIRCLE_SHA1}
+            docker push $DOCKER_USERNAME/lms:latest
 
   deploy-uat:
     executor: go-executor
@@ -37,9 +80,10 @@ jobs:
           name: Deploy to UAT
           command: |
             echo "Deploying to UAT environment..."
-            # Mock deployment - replace with actual deployment commands
-            echo "Image: $DOCKER_USERNAME/lms:<< pipeline.git.revision >>"
+            echo "Image: $DOCKER_USERNAME/lms:${CIRCLE_SHA1}"
             echo "Environment: UAT"
+            # Add your actual UAT deployment commands here
+            # Example: kubectl set image deployment/lms-app lms=$DOCKER_USERNAME/lms:${CIRCLE_SHA1}
             echo "Deployment completed successfully"
 
   deploy-prod:
@@ -50,27 +94,46 @@ jobs:
           name: Deploy to Production
           command: |
             echo "Deploying to Production environment..."
-            # Mock deployment - replace with actual deployment commands
-            echo "Image: $DOCKER_USERNAME/lms:<< pipeline.git.revision >>"
+            echo "Image: $DOCKER_USERNAME/lms:${CIRCLE_SHA1}"
             echo "Environment: Production"
+            # Add your actual production deployment commands here
+            # Example: kubectl set image deployment/lms-app lms=$DOCKER_USERNAME/lms:${CIRCLE_SHA1}
             echo "Deployment completed successfully"
 
 workflows:
-  publish-and-deploy:
+  ci-cd-pipeline:
     jobs:
-      - publish:
+      - test:
           filters:
             branches:
-              only:
-                - main
-                - develop
-      - deploy-uat:
+              ignore: /^(?!main$|develop$).*/
+      - security-scan:
           requires:
-            - publish
+            - test
           filters:
             branches:
-              only: develop
-      - deploy-prod:
+              ignore: /^(?!main$|develop$).*/
+      - build:
+          requires:
+            - security-scan
+          filters:
+            branches:
+              ignore: /^(?!main$|develop$).*/
+      # - publish:
+      #     requires:
+      #       - build
+      #     filters:
+      #       branches:
+      #         only:
+      #           - main
+      #           - develop
+      # - deploy-uat:
+      #     requires:
+      #       - publish
+      #     filters:
+      #       branches:
+      #         only: develop
+      # - deploy-prod:
           requires:
             - publish
           filters:
