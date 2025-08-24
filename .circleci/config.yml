@@ -35,7 +35,7 @@ jobs:
           command: |
             make build
 
-  build-docker-image:
+  build:
     executor: go-executor
     steps:
       - checkout
