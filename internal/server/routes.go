@@ -19,7 +19,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	}
 
 	// Health check endpoint
-	mux.HandleFunc("/health", chain(func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /health", chain(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		if _, err := w.Write([]byte("OK")); err != nil {
 			http.Error(w, "Failed to write response", http.StatusInternalServerError)
