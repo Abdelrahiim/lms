@@ -103,19 +103,13 @@ jobs:
 workflows:
   ci-cd-pipeline:
     jobs:
-      - test:
-          filters:
-            branches:
-              ignore: /^(?!main$|develop$).*/
-      - security-scan:
-          requires:
-            - test
+      - security-scan-and-build:
           filters:
             branches:
               ignore: /^(?!main$|develop$).*/
       - build:
           requires:
-            - security-scan
+            - security-scan-and-build
           filters:
             branches:
               ignore: /^(?!main$|develop$).*/
