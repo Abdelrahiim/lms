@@ -14,8 +14,6 @@ executors:
       GOSUMDB: "sum.golang.org"
 
 jobs:
-
-
   security-scan-and-build:
     executor: go-executor
     steps:
@@ -113,21 +111,21 @@ workflows:
           filters:
             branches:
               ignore: /^(?!main$|develop$).*/
-      # - publish:
-      #     requires:
-      #       - build
-      #     filters:
-      #       branches:
-      #         only:
-      #           - main
-      #           - develop
-      # - deploy-uat:
-      #     requires:
-      #       - publish
-      #     filters:
-      #       branches:
-      #         only: develop
-      # - deploy-prod:
+      - publish:
+          requires:
+            - build
+          filters:
+            branches:
+              only:
+                - main
+                - develop
+      - deploy-uat:
+          requires:
+            - publish
+          filters:
+            branches:
+              only: develop
+      - deploy-prod:
           requires:
             - publish
           filters:
