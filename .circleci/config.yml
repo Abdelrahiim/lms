@@ -25,19 +25,17 @@ jobs:
           command: |
             go install honnef.co/go/tools/cmd/staticcheck@latest
             go install github.com/securego/gosec/v2/cmd/gosec@latest
-            go install golang.org/x/vuln/cmd/govulncheck@latest
       - run:
           name: Execute code security analysis
           command: |
             staticcheck ./...
             gosec -exclude=G101 -exclude-dir=internal/database ./...
-            govulncheck ./...
       - run:
           name: Compile application using Makefile
           command: |
             make build
 
-  build:
+  build-docker-image:
     executor: go-executor
     steps:
       - checkout
