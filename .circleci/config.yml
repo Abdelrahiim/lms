@@ -1,0 +1,80 @@
+version: 2.1
+
+orbs:
+  docker: circleci/docker@2.2.0
+  go: circleci/go@1.8.0
+
+executors:
+  go-executor:
+    docker:
+      - image: cimg/go:1.21
+
+jobs:
+  publish:
+    executor: go-executor
+    steps:
+      - checkout
+      - setup_remote_docker:
+          version: 20.10.14
+      - docker/check:
+          docker-username: DOCKER_USERNAME
+          docker-password: DOCKER_PASSWORD
+      - docker/build:
+          image: $DOCKER_USERNAME/lms
+          tag: << pipeline.git.revision >>
+      - docker/push:
+          image: $DOCKER_USERNAME/lms
+          tag: << pipeline.git.revision >>
+      - docker/push:
+          image: $DOCKER_USERNAME/lms
+          tag: latest
+
+  deploy-uat:
+    executor: go-executor
+    steps:
+      - checkout
+      - run:
+          name: Deploy to UAT
+          command: |
+            echo "Deploying to UAT environment..."
+            # Mock deployment - replace with actual deployment commands
+            echo "Image: $DOCKER_USERNAME/lms:<< pipeline.git.revision >>"
+            echo "Environment: UAT"
+            echo "Deployment completed successfully"
+
+  deploy-prod:
+    executor: go-executor
+    steps:
+      - checkout
+      - run:
+          name: Deploy to Production
+          command: |
+            echo "Deploying to Production environment..."
+            # Mock deployment - replace with actual deployment commands
+            echo "Image: $DOCKER_USERNAME/lms:<< pipeline.git.revision >>"
+            echo "Environment: Production"
+            echo "Deployment completed successfully"
+
+workflows:
+  publish-and-deploy:
+    jobs:
+      - publish:
+          filters:
+            branches:
+              only:
+                - main
+                - develop
+      - deploy-uat:
+          requires:
+            - publish
+          filters:
+            branches:
+              only: develop
+      - deploy-prod:
+          requires:
+            - publish
+          filters:
+            branches:
+              only: main
+          context:
+            - production-deployment
