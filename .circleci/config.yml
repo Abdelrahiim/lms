@@ -33,7 +33,7 @@ jobs:
       - run:
           name: Compile application using Makefile
           command: |
-            make build
+            go build -o build/server cmd/server/main.go
 
   build:
     executor: go-executor
