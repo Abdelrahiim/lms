@@ -28,7 +28,7 @@ func (s *Server) registerAuthRoutes(mux *http.ServeMux, globalMiddleware []middl
 	))
 
 	mux.HandleFunc("POST /api/v1/auth/refresh", chain(
-		authHandler.Refresh,
+		authHandler.RefreshToken,
 		globalMiddleware...,
 	))
 

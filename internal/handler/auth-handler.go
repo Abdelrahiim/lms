@@ -281,7 +281,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 }
 
 // Refresh handles token refresh requests
-func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
+func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	// Extract refresh token from request
 	refreshToken, err := utils.GetBearerToken(r.Header)
 	if err != nil {
