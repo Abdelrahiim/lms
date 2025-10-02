@@ -39,8 +39,7 @@ jobs:
     executor: go-executor
     steps:
       - checkout
-      - setup_remote_docker:
-          version: 20.10.18
+      - setup_remote_docker
       - run:
           name: Build application
           command: |
@@ -55,8 +54,7 @@ jobs:
     executor: go-executor
     steps:
       - checkout
-      - setup_remote_docker:
-          version: 20.10.18
+      - setup_remote_docker
       - docker/check:
           docker-username: DOCKER_USERNAME
           docker-password: DOCKER_PASSWORD
