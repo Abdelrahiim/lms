@@ -1,7 +1,7 @@
 # =============================================================================
 # Build stage
 # =============================================================================
-FROM golang:1.25.0-alpine3.20 AS builder
+FROM golang:1.24-alpine3.20 AS builder
 
 # Install build dependencies and security tools
 RUN apk add --no-cache \
@@ -95,7 +95,7 @@ ENTRYPOINT ["/app"]
 # =============================================================================
 # Development stage (optional)
 # =============================================================================
-FROM golang:1.25.0-alpine3.20 AS development
+FROM golang:1.24-alpine3.20 AS development
 
 # Install development tools
 RUN apk add --no-cache \
