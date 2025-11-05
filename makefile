@@ -31,6 +31,6 @@ dev: sqlc
 
 setup:
 	go mod download
-	go install github.com/cosmtrek/air@latest
+	go install github.com/cosmtrek/air@v1.62.0
 	go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
 	go install github.com/pressly/goose/v3/cmd/goose@latest
