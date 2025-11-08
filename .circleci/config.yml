@@ -7,7 +7,7 @@ orbs:
 executors:
   go-executor:
     docker:
-      - image: cimg/go:1.24
+      - image: cimg/go:1.24.5
     environment:
       GO111MODULE: "on"
       GOPROXY: "https://proxy.golang.org,direct"
